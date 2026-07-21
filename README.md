@@ -1,157 +1,116 @@
-# qnet-examples
+# qnet-core
+### Design the quantum internet before it exists
 
-Python examples for **qnet_core** — a quantum network simulator.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![Release](https://img.shields.io/github/v/release/qnet-labs/qnet-core)](https://github.com/qnet-labs/qnet-core/releases)
 
-Run these scripts to explore entanglement distribution across different topologies, routing strategies, and physical constraints. No build step required.
+Quantum network entanglement distribution simulator. Models quantum repeater networks, link generation protocols, fidelity purification (BBPSSW), and routing strategies for quantum communication — with both Rust library and Python bindings.
+
+## Features
+
+- **Event-driven simulation** — timeline coordination with binary heap scheduler
+- **Entanglement purification** — BBPSSW distillation protocol
+- **Three routing strategies** — lowest latency, highest fidelity, highest success rate
+- **Monte Carlo ensembles** — statistical analysis across thousands of runs
+- **Pre-built topologies** — telecom backbone, repeater chain, hybrid satellite-fiber
+- **Topology comparison & diffing** — compare and version your network designs
+- **.qnet file format** — load/save/diff network topologies
+- **Python bindings** — full API via PyO3
 
 ## Installation
+
+**Requirements:** Python 3.9 or later.
 
 ```bash
 pip install qnet-core
 ```
 
-Then run any example with `python examples/<script>.py`.
+That's it — you're ready to simulate quantum networks. See [Building](#building) for building from source.
 
-## Examples
-
-| # | Script | Description |
-|---|--------|-------------|
-| 1 | `examples/1_basic_simuation.py` | Routing trade-offs: latency vs. fidelity on a 2-hop repeater chain |
-| 2 | `examples/2_basic_simulation.py` | Physical constraint boundaries (decoherence, latency limits) |
-| 3 | `examples/3_test_latency_optimized_routing.py` | Lowest-latency routing across multi-hop paths |
-| 4 | `examples/4_test_highest_fidelity_routing.py` | Highest-fidelity routing with purification cycles |
-| 5 | `examples/5_test_physical_constraints_failure.py` | Requests that fail due to physical limits |
-| 6 | `examples/6_test_sensitivity_analysis.py` | Parameter sensitivity analysis (which factors most impact success?) |
-| 7 | `examples/7_custom_simulation_config.py` | Custom simulation configuration |
-| 8 | `examples/8_topology_generation.py` | Pre-built topologies: satellite-fiber, telecom backbone, repeater chain |
-| 9 | `examples/9_qnet_file_load.py` | Load `.qnet` JSON topology files directly |
-| 10 | `examples/10_qnet_programmatic.py` | Build `.qnet` files programmatically, save, reload, simulate |
-| 11 | `examples/11_strategy_battle.py` | Strategy comparison exercise |
-| 12 | `examples/12_mesh_network.py` | Multi-path routing on a mesh topology; Monte Carlo across strategies |
-| 13 | `examples/13_seed_determinism.py` | Seed-based reproducibility for fair config comparison |
-| 14 | `examples/14_link_utilization.py` | Link utilization analysis |
-
-Run any example:
-
-```bash
-python examples/8_topology_generation.py
-```
-
-## Running tests
-
-```bash
-python test_example.py
-```
-
-## Core API
-
-### Quick start — single simulation request
+## Quick Start
 
 ```python
-from qnet_core import QNetEngine, NodeDefinition, LinkDefinition, StrategyType
+from qnet_core import QNetEngine, generate_topology
+
+topology = generate_topology("hybrid_satellite_fiber")
 
 engine = QNetEngine()
+engine.load_topology(topology)
 
-nodes = [
-    NodeDefinition(id="Alice", memory_lifetime_t2=150.0),
-    NodeDefinition(id="Repeater_1", memory_lifetime_t2=150.0),
-    NodeDefinition(id="Bob", memory_lifetime_t2=150.0),
-]
+stats = engine.simulate("Toronto", "London", fidelity_target=0.9, max_latency_ms=200, runs=100)
 
-links = [
-    LinkDefinition(from_node="Alice", to="Repeater_1", distance_km=25.0, base_fidelity=0.88, generation_rate_hz=1000.0),
-    LinkDefinition(from_node="Repeater_1", to="Bob", distance_km=25.0, base_fidelity=0.88, generation_rate_hz=1000.0),
-]
-
-engine.define_network(nodes=nodes, links=links)
-
-result = engine.request_entanglement(
-    from_node="Alice", to="Bob",
-    fidelity_target=0.70,
-    max_latency_ms=50.0,
-    strategy=StrategyType.LowestLatency,
-)
-
-print(result.success, result.latency_ms, result.final_fidelity, result.execution_path)
+print(stats.empirical_success_rate)
 ```
 
-### Monte Carlo ensemble
+## Documentation
 
-```python
-stats = engine.simulate(
-    from_node="Alice", to="Bob",
-    fidelity_target=0.75, max_latency_ms=5000.0,
-    runs=100, seed=42,
-)
+- [Python API Reference](python/README.md) — complete type signatures and function docs
+- [Changelog](CHANGELOG.md) — version history
 
-print(stats.empirical_success_rate)   # e.g. 0.87
-print(stats.mean_latency_ms)           # mean latency across runs
-print(stats.mean_fidelity)             # mean fidelity across runs
-print(stats.link_utilization_heatmap)  # per-link usage data
+## Examples
+[Example repo + Jupiter Notebooks](https://github.com/qnet-labs/qnet-examples)
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)]
+(https://colab.research.google.com/github/qnet-labs/qnet-core/blob/main/notebooks/01_gothamq_validation.ipynb)
+
+
+## Roadmap
+- [x] Integration hooks for higher-level protocols (QKD, teleportation, distributed computing)
+- [ ] Expanded noise/decoherence modeling
+- [ ] Additional purification protocols
+- [ ] Parallel simulation support (also planned for the hosted simulation API)
+
+## Building
+
+```bash
+# Rust only
+cargo build
+
+# Format & lint
+cargo fmt && cargo clippy
+
+# Run tests
+cargo test
 ```
 
-### Load a `.qnet` topology file
+### Rust dependency
 
-```python
-from qnet_core import from_qnet_file
-
-engine = from_qnet_file("toronto_london.qnet")
-stats = engine.simulate(from_node="Toronto", to="London", fidelity_target=0.75, runs=100)
+```bash
+cargo add qnet-core
 ```
 
-### Build a `.qnet` file programmatically
+## Architecture
 
-```python
-from qnet_core import PyQNetFile
-
-f = PyQNetFile("my_network")
-f.add_node("hub", memory_lifetime_ms=200.0, node_type="ground")
-f.add_node("edge", memory_lifetime_ms=150.0, node_type="ground")
-f.add_link("", "hub", "edge", distance_km=50.0, base_fidelity=0.92, generation_rate_hz=1000.0)
-f.save("my_network.qnet")
+```
+src/
+├── api/          # Public API boundary (request/response types)
+├── routing/      # Pathfinding + strategy selection
+├── protocols.rs  # BBPSSW purification
+├── scheduler.rs  # Timeline orchestration
+├── simulation.rs # Event-driven runtime
+├── network.rs    # Quantum graph model
+├── memory.rs     # Qubit register tracking
+├── metrics.rs    # Telemetry
+└── swapping.rs   # Bell-state transformations
+python/           # Python bindings + examples
 ```
 
-## Strategy types
+## License
 
-| Strategy | Use when... |
-|----------|-------------|
-| `LowestLatency` | You need the fastest result |
-| `HighestFidelity` | Quality matters; purification is worth the extra time |
-| `HighestSuccess` | Reliability is the priority |
+MIT — see [LICENSE](LICENSE).
 
-## Pre-built topologies
+## Contributing
 
-```python
-from qnet_core import generate_topology, compare_topologies
+Contributions welcome! Please open an issue or submit a pull request.
 
-# Generate a topology
-net = generate_topology("hybrid_satellite_fiber")  # or "telecom_backbone", "repeater_chain"
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit changes (`git commit -am 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
 
-# Compare two topologies at given endpoints
-report = compare_topologies(
-    endpoints=[
-        TopologyEndpoints("telecom_backbone", "A", "C"),
-        TopologyEndpoints("hybrid_satellite_fiber", "Toronto", "London"),
-    ],
-    fidelity_target=0.75, max_latency_ms=5000.0, runs=100,
-)
+---
 
-print(report.recommended_topology)
-```
-
-## Fixture files
-
-These `.qnet` JSON files in the repo root are topology definitions you can load:
-
-- `network_v1.qnet` — 2-node chain (A → B)
-- `network_v2.qnet` — 3-node chain (A → B → C)
-- `toronto_london.qnet` — 4-node hybrid satellite-fiber network
-- `valid_network.qnet` / `invalid_network.qnet` — validation test fixtures
-
-## Notebooks
-
-Jupyter notebooks in `notebooks/`:
-
-- `01_gothamq_validation.ipynb` — GothamQ validation workflows
-- `02_sensitivity_analysis.ipynb` — Parameter sensitivity studies
-- `03_topology_comparison.ipynb` — Fiber vs. satellite-fiber comparison
+Built with Rust + PyO3. Powered by quantum simulation.
