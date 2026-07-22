@@ -26,7 +26,7 @@ MANIFEST
 .venv/
 venv/
 ENV/
-
+www/
 # Rust
 target/
 **/*.rs.bk
